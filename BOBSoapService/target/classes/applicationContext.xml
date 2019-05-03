@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:cxf="http://camel.apache.org/schema/cxf"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+        http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
+       ">
+
+	<camelContext xmlns="http://camel.apache.org/schema/spring">
+		<route id="wsRoute">
+			<from uri="cxf:bean:executeServiceEndpoint" />
+			<bean ref="FIUsbWebServiceImpl" />
+		</route>
+		<route id="wsClient">
+			<from uri="direct:start" />
+			<to
+				uri="cxf:bean:executeServiceEndpoint?defaultOperationName=executeService" />
+		</route>
+	</camelContext>
+
+	<bean id="FIUsbWebServiceImpl" class="com.poc.BOBSoapService.FIUsbWebServiceImpl"/>
+
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer" />
+
+	<cxf:cxfEndpoint id="executeServiceEndpoint"
+		address="http://lsinkalina4:${port1}/executeService" serviceClass="com.infosys.ci.fiusb.webservice.FIUsbWebService" />
+
+</beans>

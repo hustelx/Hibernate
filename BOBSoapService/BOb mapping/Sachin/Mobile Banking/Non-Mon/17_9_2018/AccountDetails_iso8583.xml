@@ -1,0 +1,193 @@
+<?xml version="1.0"?>
+
+<!-- The sample mapping is for ISO 20022 payment requests -->
+<application  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://www.sas.com/sfm/eop"
+    xsi:schemaLocation="http://www.sas.com/sfm/eop mapping.xsd">
+
+    <messages name="ISO 8583">
+        <message messageType="1200" subType="1200" mapperId="iso8583_Acc-Details">
+            <fields>
+
+				<field name="aqo_acct_num">
+                    <srcField name="102">
+					<!-- Extract 3rd elemrnt of DE 102  012        0000    11111111111111-->
+						<groovy>
+							return value.split("\\s+")[2]
+						</groovy>
+					</srcField>
+				</field>
+
+				<field name="aqo_branch_id">
+                    <srcField name="102">
+					<!-- Extract 2nd elemrnt of DE 102  012        0000    11111111111111
+
+						<Bank Code><8 Spaces><Sol id><4 Spaces><Account Number> -->
+						<groovy>
+							return value.split("\\s+")[1]
+						</groovy>
+					</srcField>
+                </field>				
+						
+				<field name="aqo_acct_post_code">
+                    <srcField name=""/>
+					<!--ADDRESS.CNTRY_CODE -->
+                </field>
+				
+				<field name="aqo_acct_cntry_code">
+                    <srcField name=""/>
+					<!-- ADDRESS.ZIP -->
+                </field>
+												
+				<field name="'rua_10byte_string_004">
+                    <srcField name="125">
+					<!-- DE 125<3rd Element> ACDTLS|98330100001364|OOE000207|-->
+						<groovy>
+							return value.split("\\|")[2]
+						</groovy>
+					</srcField>
+                </field>
+								               					 
+				<field name="rqo_tran_date">
+                    <srcField name="12"/>
+					<!-- Extract Date from DE 12 and convert to UTC -->
+						<groovy>
+							String format = "yyyyMMddHHmmss";
+							java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(format);
+							java.util.Date date = sdf.parse(value);
+							java.time.ZonedDateTime zdt = java.time.ZonedDateTime.ofInstant(date.toInstant(), java.time.ZoneId.of("UTC"));
+							String utcDateStr = zdt.format(java.time.format.DateTimeFormatter.ofPattern(format));		
+							return utcDateStr.substring(0, 8)
+						</groovy>
+					</srcField>
+                </field>
+
+                <field name="rqo_tran_time">
+                    <srcField name="12">
+					<!-- Extract Date from DE 12 and convert to UTC -->
+						<groovy>
+							String format = "yyyyMMddHHmmss";
+							java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(format);
+							java.util.Date date = sdf.parse(value);
+							java.time.ZonedDateTime zdt = java.time.ZonedDateTime.ofInstant(date.toInstant(), java.time.ZoneId.of("UTC"));
+							String utcDateStr = zdt.format(java.time.format.DateTimeFormatter.ofPattern(format));		
+							return utcDateStr.substring(8, 10) + ":" + utcDateStr.substring(10, 12) + ":" + utcDateStr.substring(12, 14) + ".00"
+						</groovy>
+					</srcField>
+                </field>
+				
+				
+				<field name="rqo_proc_utc_datetime">
+                    <srcField name="12">
+					<!-- Extract Date from DE 12 and convert to UTC -->
+					<!--  not clear -->
+					</srcField>
+                </field>
+				
+              <field name="rqo_tran_date_alt">
+                    <srcField name="12">
+					<!-- Extract Date from DE 12 and convert to UTC -->
+						<groovy>
+							return value.substring(0,8)
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="tng_eff_date">
+                    <srcField name="12"/>
+                </field>
+
+				<field name="xqo_cust_num">
+                    <srcField name=""/>
+					<!-- CLOC.CUST_ID -->
+                </field>
+
+				<field name="xqo_language">
+                    <srcField name=""/>
+					<!--CUSR.LANG_ID -->
+                </field>	
+
+				<field name="xqo_cust_post_code">
+                    <srcField name=""/>
+					<!-- CUSR.C_ZIP -->
+                </field>
+
+				<field name="xqo_cust_cntry_code">
+                    <srcField name=""/>
+					<!--CUSR.C_CNTRY -->
+                </field>					
+
+				<field name="smh_acct_type" default="CS"/>
+                    
+				<field name="smh_seg_id_version" default="00000004"/>
+				
+				<field name="smh_msg_version" default="04.04.03"/>
+				
+                <field name="smh_tran_type" default="TRX"/>
+
+                <field name="smh_cust_type" default="N"/>
+
+                <field name="smh_authenticate_mtd" default="NC"/>
+
+                <field name="smh_channel_type" default="W"/>
+
+				<field name="smh_priority" default="7"/>
+
+				<field name="smh_msg_type" default="1"/>
+
+				<field name="smh_resp_req" default="1"/>
+
+				<field name="smh_sdd_ind" default="1"/>
+
+				<field name="smh_source" default="BOB"/>
+
+				<field name="smh_dest" default="SFM"/>
+            
+                <field name="smh_multi_org_name" default="BOB"/>
+
+                <field name="smh_activity_detail1" default="NAP"/>
+
+                <field name="smh_activity_detail2" default="NAP"/>
+
+                <field name="smh_activity_detail3" default="NAP"/>
+				
+				<field name="smh_activity_type" default="NM"/>
+				
+				<field name="rua_seg_id_version" default="01071003"/> 
+				
+				<field name="aqd_seg_id_version" default="01202002"/>
+																	
+				<field name="aqo_seg_id_version" default="01200003"/>
+				
+				<field name="aqo_billing_curr_code" default="356"/>
+				
+				<field name="aqo_bill_curr_conv_rate" default="1"/>
+																
+				<field name="hqo_seg_id_version" default="01401002"/>
+				
+				<field name="'hqo_device_id" default="IMIE"/>
+												
+				<field name="rqo_seg_id_version" default="01001004"/>
+                
+				<field name="rqo_tran_utc_flag" default="Y"/>
+                
+                <field name="tng_seg_id_version" default="01505002"/>
+				
+				<field name="tng_tran_type" default="MB"/>
+				
+				<field name="tng_entity" default="G"/>
+				
+				<field name="tng_details_ind" default="N"/>
+												
+				<field name="tng_category" default="R"/>
+				
+				<field name="tng_tran_status" default="N"/>
+				
+				<field name="tng_sub_tran_type" default="ACDTLS"/>
+												
+				<field name="xqo_seg_id_version" default="01101003"/>
+								                
+              </fields>
+        </message>
+    </messages>
+</application>

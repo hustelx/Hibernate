@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?> 
+<WL5G3N0:definitions targetNamespace="http://webservice.fiusb.ci.infosys.com/" xmlns="" xmlns:WL5G3N0="http://schemas.xmlsoap.org/wsdl/" xmlns:WL5G3N1="http://webservice.fiusb.ci.infosys.com/" xmlns:WL5G3N2="http://schemas.xmlsoap.org/wsdl/soap/">
+<WL5G3N0:types>
+<xsd:schema targetNamespace="http://webservice.fiusb.ci.infosys.com/" xmlns="http://www.w3.org/2001/XMLSchema" xmlns:impl="http://webservice.fiusb.ci.infosys.com/" xmlns:intf="http://webservice.fiusb.ci.infosys.com/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:wsdlsoap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsi="http://ws-i.org/profiles/basic/1.1/xsd" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<xsd:element name="executeServiceResponse">
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="executeServiceReturn" nillable="true" type="xsd:string" /> 
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="executeService">
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="arg_0_0" nillable="true" type="xsd:string" /> 
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+</xsd:schema>
+</WL5G3N0:types>
+<WL5G3N0:message name="executeServiceResponse">
+<WL5G3N0:part element="WL5G3N1:executeServiceResponse" name="parameters" /> 
+</WL5G3N0:message>
+<WL5G3N0:message name="executeServiceRequest">
+<WL5G3N0:part element="WL5G3N1:executeService" name="parameters" /> 
+</WL5G3N0:message>
+<WL5G3N0:portType name="FIUsbWebService">
+<WL5G3N0:operation name="executeService">
+<WL5G3N0:input message="WL5G3N1:executeServiceRequest" name="executeServiceRequest" /> 
+<WL5G3N0:output message="WL5G3N1:executeServiceResponse" name="executeServiceResponse" /> 
+</WL5G3N0:operation>
+</WL5G3N0:portType>
+<WL5G3N0:binding name="FIUsbWebServiceSoapBinding" type="WL5G3N1:FIUsbWebService">
+<WL5G3N2:binding style="document" transport="http://schemas.xmlsoap.org/soap/http" /> 
+<wsaw:UsingAddressing xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" wsdl:required="false" xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" /> 
+<WL5G3N0:operation name="executeService">
+<WL5G3N2:operation /> 
+<WL5G3N0:input name="executeServiceRequest">
+<WL5G3N2:body use="literal" /> 
+</WL5G3N0:input>
+<WL5G3N0:output name="executeServiceResponse">
+<WL5G3N2:body use="literal" /> 
+</WL5G3N0:output>
+</WL5G3N0:operation>
+</WL5G3N0:binding>
+<WL5G3N0:service name="FIUsbWebServiceService">
+<WL5G3N0:port binding="WL5G3N1:FIUsbWebServiceSoapBinding" name="FIUsbWebService">
+<WL5G3N2:address location="https://FIN10TEST7XAP:17200/fiwebservice/FIWebService" /> 
+</WL5G3N0:port>
+</WL5G3N0:service>
+</WL5G3N0:definitions>

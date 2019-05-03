@@ -1,0 +1,772 @@
+<?xml version="1.0"?>
+
+<!-- The sample mapping is for ISO 20022 payment requests -->
+<application  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://www.sas.com/sfm/eop"
+    xsi:schemaLocation="http://www.sas.com/sfm/eop mapping.xsd">
+
+    <messages name="ISO 8583">
+        <message messageType="1200" subType="1200" mapperId="iso8583_FundTraansfer">
+            <fields>
+			
+			<field name="aqd_avail_bal">
+					<srcField name="" /><!-- GAM.CLR_BAL_AMT -->
+				</field>
+				
+				<field name="AQO_ACCT_CNTRY_CODE">
+                    <srcField name="20"/>
+                </field>
+				
+				<field name="aqo_acct_num">
+                    <srcField name="102">
+					<!--3rd element of 102 -->
+						<groovy>
+							return value.split("\\s+")[2]
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="aqo_branch_id">
+                    <srcField name="102">
+					<!--Extract 2nd elemrnt of DE 102
+
+					<Bank Code><8 Spaces><Sol id><4 Spaces><Account Number> -->
+						<groovy>
+							return value.split("\\s+")[1]
+						</groovy>
+					</srcField>
+                </field>
+				
+                <field name="aqo_acct_post_code">
+                    <srcField name=""/>
+					<!-- ADDRESS.ZIP -->
+                </field>
+				
+				<field name="aqo_acct_cntry_code">
+                    <srcField name=""/>
+					<!-- ADDRESS.CNTRY_CODE -->
+                </field>
+					 
+				<field name="rqo_tran_date">
+                    <srcField name="12">
+					<!-- Convert to UTC -->
+						<groovy>
+							String format = "yyyyMMddHHmmss";
+							java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(format);
+							java.util.Date date = sdf.parse(value);
+							java.time.ZonedDateTime zdt = java.time.ZonedDateTime.ofInstant(date.toInstant(), java.time.ZoneId.of("UTC"));
+							String utcDateStr = zdt.format(java.time.format.DateTimeFormatter.ofPattern(format));		
+							return utcDateStr.substring(0, 8)
+						</groovy>
+					</srcField>
+                </field>
+
+                <field name="rqo_tran_time">
+                    <srcField name="12">
+					<!-- Convert to UTC -->
+						<groovy>
+							String format = "yyyyMMddHHmmss";
+							java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(format);
+							java.util.Date date = sdf.parse(value);
+							java.time.ZonedDateTime zdt = java.time.ZonedDateTime.ofInstant(date.toInstant(), java.time.ZoneId.of("UTC"));
+							String utcDateStr = zdt.format(java.time.format.DateTimeFormatter.ofPattern(format));		
+							return utcDateStr.substring(8, 10) + ":" + utcDateStr.substring(10, 12) + ":" + utcDateStr.substring(12, 14) + ".00"	
+						</groovy>
+					</srcField>
+                </field>
+					 
+                <field name="RQO_TRAN_TIME_ALT">
+                    <srcField name="12"/>
+                </field>
+
+                <field name="RQO_TRAN_DATE_ALT">
+                    <srcField name="12"/>
+                </field>
+				
+				<field name="tbt_tran_type">
+                    <srcField name="102">
+					<!--If DE 103(3rd Element) in (
+						"98260100010947",
+							) or DE 125( chars 1-5 ) = "FTOWN" or DE 125(chars 1-6)= "TXNPPF"
+						Then Do
+							"T"
+							Else if DE 103(3rd Element) in ( "50900100001298",
+						"03910015181491" ,
+						"29040015181478" ,
+						"03910200000508",
+						"07250100008560",
+						"50020100000763"
+							)
+						Then Do
+							"B"
+					End -->
+						<groovy>
+							String temp = records['125']
+							java.util.List<String> list = new java.util.ArrayList<String>();
+						
+							list.add("50900100001298");
+							list.add("03910015181491");
+							list.add("29040015181478");
+							list.add("03910200000508");
+							list.add("07250100008560");
+							list.add("50020100000763");
+		
+							
+							if(value == "98260100010947" || temp.substring(0,5).equals("FTOWN") || temp.substring(0,6).equals("TXNPPF"))
+								return 'T'
+							else if(list.contains(value.split("\\s+")[2]))
+								return 'B'
+							
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="tbt_ref_num">
+                    <srcField name="37"/>
+                </field>
+				
+				<field name="tbt_description">
+                    <srcField name="102">
+					<!-- if DE 103( 3rd Element) = "98260100010947" 
+							OR 
+						if DE 125(1st Element<Pipe Separated>) ="TXNPPF" 
+						OR
+						if DE 125(1st Element<Pipe Separated>) ="FTOWN" 
+						OR
+						if DE 125(1st Element) = "FTTPRTY" AND DE 103(3rd Element) Not in ( 98260100010947 ,  50900100001298 ,
+						03910015181491,
+						29040015181478,
+						29040015181477,
+						03910200000508,
+						07250100008560,
+						50020100000763
+						
+						Then Do 126
+							)-->
+						<groovy>
+							java.util.List<String> list = new java.util.ArrayList<String>();
+							list.add("98260100010947")
+							list.add("50900100001298")
+							list.add("03910015181491")
+							list.add("29040015181478")
+							list.add("29040015181477")
+							list.add("03910200000508")
+							list.add("07250100008560")
+							list.add("50020100000763")
+							
+							if( (value.split("\\s+")[2].equals("98260100010947") || records['125'].split("\\|")[0].equals("TXNPPF") ||
+								records['125'].split("\\|")[0].equals("FTOWN") || (records['125'].split("\\|")[0].equals("FTTPRTY"))) &&
+								(!(list.contains(value.split("\\s+")[2])))
+								)
+							{
+								return records['126']
+							}
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="tbt_billing_amt">
+                    <srcField name="125">
+					<!-- If  DE 125( 1st Element <Pipe Separator> ) = "FDR"
+						Then Do
+						DE 125( 7th Element <Pipe Separator>)
+						Else if DE 125( 1st Element) = ERD" 
+						Then Do
+						DE 125( 4 th Element <Pipe Separator>)
+						Else if DE 125( 1st Element)="TXNPPF"
+						Then Do 
+						DE 125( 4 th Element <Pipe Separator>)
+						Else Do
+						DE 4 -->
+						<groovy>
+							if(value.split("\\|")[0].equals("FDR"))
+								return value.split("\\|")[6]
+							else if(value.split("\\|")[0].equals("ERD"))
+								return value.split("\\|")[3]
+							else if(value.split("\\|")[0].equals("TXNPPF"))
+								return value.split("\\|")[3]
+							else 
+								return records['4']
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="tbt_tran_amt">
+                    <srcField name="125">
+					<!-- If  DE 125( 1st Element <Pipe Separator> ) = "FDR"
+								Then Do
+							DE 125( 7th Element <Pipe Separator>)
+						Else if DE 125( 1st Element) = ERD" 
+							Then Do
+						DE 125( 14 th Element <Pipe Separator>)
+						Else if DE 125( 1st Element)="TXNPPF"
+						Then Do 
+						DE 125( 4 th Element <Pipe Separator>)
+						Else Do
+						DE 4-->
+						<groovy>
+							if(value.split("\\|")[0].equals("FDR"))
+								return value.split("\\|")[6]
+							else if(value.split("\\|")[0].equals("ERD"))
+								return value.split("\\|")[13]
+							else if(value.split("\\|")[0].equals("TXNPPF"))
+								return value.split("\\|")[3]
+							else 
+								return records['4']
+						</groovy>
+					</srcField>
+                </field>
+
+				<field name="tbt_tran_curr_code">
+                    <srcField name="49"/>
+                </field>
+				
+				<field name="tbt_mod_amt">
+                    <srcField name="125">
+					<!-- If DE 125<1st Element Pipe Separated > = "FDR"
+						Then DE 125<7th Element>
+						Else If DE 125<1st Element Pipe Separated > = "ERD"
+						Then DE 125<6th Element>
+						Else If DE 125<1st Element Pipe Separated > = "TXNPPF"
+						Then DE 125<3rd Element>
+						Else DE 4 -->
+						<groovy>
+							if(value.split("\\|")[0].equals("FDR"))
+								return value.split("\\|")[6]
+							else if(value.split("\\|")[0].equals("ERD"))
+								return value.split("\\|")[5]
+							else if(value.split("\\|")[0].equals("TXNPPF"))
+								return value.split("\\|")[2]
+							else 
+								return records['4']
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="tbt_self_acct_ind">
+                    <srcField name="125">
+					<!--If DE 125(1st Element <pipe sepatered>_= "FTOWN"
+					Then Do
+					"Y"
+					Else Do
+					"N" -->
+						<groovy>
+							if(value.split("\\|")[0].equals("FTOWN"))
+								return 'Y'
+							else
+								return 'N'
+						</groovy>
+					</srcField>
+                </field>
+               
+			   <field name="tbt_bill_sub_cat">
+                    <srcField name="102">
+					<!--if DE 103( 3rd Element) = "98260100010947"
+						Then Do "NEFT"
+						if DE 103( 3rd Element) ="50900100001298"
+						Then Do "TONE"
+						"if DE 125(1st Element) = ""FTTPRTY"" AND DE 103(3rd Element) Not in ( 98260100010947 ,  50900100001298 ,
+					03910015181491,
+					29040015181478,
+					29040015181477,
+					03910200000508,
+					07250100008560,
+					50020100000763
+ )"
+Then Do "WBNK"
+if DE 103( 3rd Element) = "03910015181491"
+Then Do 
+BBPS
+if DE 103( 3rd Element) ="29040015181478"
+Then Do 
+BCBS
+if DE 103( 3rd Element) ="29040015181477"
+Then Do 
+BUTL
+if DE 103( 3rd Element) ="03910200000508"
+Then Do
+CCBP
+if DE 125(1st Element<Pipe Separated>) ="FDR"
+Then Do
+FDOP
+if DE 103( 3rd Element) ="07250100008560"
+Then Do 
+INST
+if DE 103( 3rd Element) ="50020100000763"
+Then Do
+VISA
+if DE 125(1st Element<Pipe Separated>) ="FTOWN"
+Then Do
+OWNA
+if DE 125(1st Element<Pipe Separated>) ="ERD"
+Then Do
+RDOP
+if DE 125(1st Element<Pipe Separated>) ="TXNPPF"
+Then Do
+PPFT -->
+						<groovy>
+				
+							java.util.List<String> list = new java.util.ArrayList<String>();
+							list.add("98260100010947")
+							list.add("50900100001298")
+							list.add("03910015181491")
+							list.add("29040015181478")
+							list.add("29040015181477")
+							list.add("03910200000508")
+							list.add("07250100008560")
+							list.add("50020100000763")
+							
+							if(value.split("\\s+")[2].equals("98260100010947"))
+								return "NEFT"
+								
+							else if(value.split("\\s+")[2].equals("50900100001298"))
+								return "TONE"
+							else if(records['125'].split("\\|")[0].equals("FTTPRTY") && !(list.contains(value.split("\\s+")[2])))
+										return "WBNK"
+							else if(records['103'].split("\\s+")[2].equals("03910015181491"))
+								return "BBPS"
+								
+							else if(records['103'].split("\\s+")[2].equals("29040015181478"))
+								return "BCBS"
+							
+							else if(records['103'].split("\\s+")[2].equals("29040015181477"))
+								return "BUTL"
+							
+							else if(records['103'].split("\\s+")[2].equals("03910200000508"))
+								return "CCBP"
+							
+							else if(records['103'].split("\\s+")[2].equals("07250100008560"))
+								return "INST"
+							
+							else if(records['103'].split("\\s+")[2].equals("50020100000763"))
+								return "VISA"
+							
+							else if(records['125'].split("\\|")[0].equals("FDR"))
+								return "FDOP"
+							
+							else if(records['125'].split("\\|")[0].equals("FTOWN"))
+								return "OWNA"
+							
+							else if(records['125'].split("\\|")[0].equals("ERD"))
+								return "RDOP"
+							
+							else if(records['125'].split("\\|")[0].equals("TXNPPF"))
+								return "PPFT"
+						
+						</groovy>
+					</srcField>
+                </field>
+               
+			   <field name="tpp_entity_type">
+                    <srcField name="125"/>
+					<!-- On Hold -->
+					<!-- if DE 103( 3rd Element) = "98260100010947"
+							Then Do 
+							"T"
+
+							if DE 103( 3rd Element) ="50900100001298"
+							"if DE 125(1st Element) = ""FTTPRTY"" AND DE 103(3rd Element) Not in ( 98260100010947 ,  50900100001298 ,
+							03910015181491,
+							29040015181478,
+							29040015181477,
+							03910200000508,
+							07250100008560,
+							50020100000763
+							)"
+							Then Do "S"
+							if DE 125(1st Element<Pipe Separated>) ="FTOWN"
+							Then Do "S"
+							Else Do 
+							"M" -->
+                </field>
+				
+				<field name="tpp_num">
+                    <srcField name="125">
+					<!-- "If DE 125 = ""FTOWN""
+							Then Do
+										DE 103 3rd  Element
+							if DE 103( 3rd Element) = ""98260100010947""
+							Then Do
+									DE 125(Bits 31-39)
+							Else If DE 103( 3rd Element) =""03910200000508""
+							Then Do DE 126
+							Else if DE 103( 3rd Element) =""50020100000763""
+							Then Do DE 126
+							Else if DE 125(1st Element) = ""FTTPRTY"" AND DE 103(3rd Element) Not in ( 98260100010947 ,  50900100001298 ,
+							03910015181491,
+							29040015181478,
+							29040015181477,
+							03910200000508,
+							07250100008560,
+							50020100000763
+							)
+							Then Do DE 103 3rd Element" -->
+						<groovy>
+							java.util.List<String> list = new java.util.ArrayList<String>();
+							list.add("98260100010947")
+							list.add("50900100001298")
+							list.add("03910015181491")
+							list.add("29040015181478")
+							list.add("29040015181477")
+							list.add("03910200000508")
+							list.add("07250100008560")
+							list.add("50020100000763")
+							
+							if(value == "FTOWN")
+								return records['102'].split("\\s+")[2]
+							if(records['102'].split("\\s+")[2].equals("98260100010947"))
+								return value.substring(30,39)
+							
+							else if(records['103'].split("\\s+")[2].equals("03910200000508") || 		records['102'].split("\\s+")[2].equals("50020100000763"))
+								return records['126']
+							else if(value.split("\\|")[0].equals("FTTPRTY") && !(list.contains(records['102'].split("\\s+")[2])))
+								return records['103'].split("\\s+")[2]
+								
+							
+						</groovy>
+					</srcField>
+                </field>
+               
+			   <field name="tpp_name">
+                    <srcField name="102">
+					<!-- if DE 103( 3rd Element) = "98260100010947"
+						Then Do
+						DE 125( Bits 5-34)
+						Else Do
+              " " -->
+						<groovy>
+							if(value.split("\\s+")[2]).equals("98260100010947"))
+								return records['125'].substring(4,34)
+							else
+								return ''
+						</groovy>
+					</srcField>
+					
+                </field>
+				
+				<field name="tpp_bank_post_code">
+                    <srcField name="102">
+					<!-- if DE 103( 3rd Element) = "98260100010947"
+						Then Do
+						DE 125(Bits 56-66)
+						Else Do
+						" " -->
+						<groovy>
+							if(value.split("\\s+")[2]).equals("98260100010947"))
+								return records['125'].substring(55,66)
+							else
+								return ''
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="tpp_bank_num">
+                    <srcField name="125">
+					<!--  if DE 125(1st Element<Pipe Separated>) ="FTOWN"
+						Then Do DE 103 1st Element
+						Else if DE 125(1st Element) = "FTTPRTY" AND DE 103(3rd Element) Not in ( 98260100010947 ,  50900100001298 ,
+						03910015181491,
+						29040015181478,
+						29040015181477,
+						03910200000508,
+						07250100008560,
+						50020100000763
+						) Then Do DE 103 1st Element
+						Else Do
+							" " -->
+						<groovy>
+							java.util.List<String> list = new java.util.ArrayList<String>();
+							list.add("98260100010947")
+							list.add("50900100001298")
+							list.add("03910015181491")
+							list.add("29040015181478")
+							list.add("29040015181477")
+							list.add("03910200000508")
+							list.add("07250100008560")
+							list.add("50020100000763")
+							if(value.split(\\|)[0].equals("FTOWN"))
+								return records['103'].split("\\s+")[0]
+							else if(value.split("\\|")[0].equals("FTTPRTY") && !(list.contains(records['102'].split("\\s+")[2])))
+								return records['102'].split("\\s+")[0]
+							else
+								return ''
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="tpp_branch_id">
+                    <srcField name="102">
+					<!-- if DE 103( 3rd Element) = "98260100010947"
+						Then Do
+									DE 103(Bits 12-15)
+						Else if DE 125(1st Element<Pipe Separated>) ="FTOWN"
+						Then Do DE 103 2nd Element
+						Else if DE 125(1st Element) = "FTTPRTY" AND DE 103(3rd Element) Not in ( 98260100010947 ,  50900100001298 ,
+						03910015181491,
+						29040015181478,
+						29040015181477,
+						03910200000508,
+						07250100008560,
+						50020100000763
+						) Then Do DE 103 2nd Element
+						Else Do
+									" " -->
+						<groovy>
+							java.util.List<String> list = new java.util.ArrayList<String>();
+							list.add("98260100010947")
+							list.add("50900100001298")
+							list.add("03910015181491")
+							list.add("29040015181478")
+							list.add("29040015181477")
+							list.add("03910200000508")
+							list.add("07250100008560")
+							list.add("50020100000763")
+							
+							if(value.split("\\s+")[2].equals("98260100010947")) 
+								return value.substring(11,15)
+							else if(records['125'].split("\\|")[0].equals("FTOWN"))
+								return value.split("\\s+")[2]
+							else if( records['125'].split("\\|")[0].equals("FTTPRTY") && !(list.contains(value.split("\\s+")[2])))
+								return value.split("\\s+")[1]
+							else	
+								return ''
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="tpp_acct_num">
+                    <srcField name="102">
+					<!-- If DE 125 = "FTOWN"
+						Then Do
+									DE 103 3rd  Element
+						if DE 103( 3rd Element) = "98260100010947"
+						Then Do
+								DE 125(Bits 31-39)
+						Else If DE 103( 3rd Element) ="03910200000508"
+						Then Do DE 126
+						Else if DE 103( 3rd Element) ="50020100000763"
+						Then Do DE 126
+						Else if DE 125(1st Element) = "FTTPRTY" AND DE 103(3rd Element) Not in ( 98260100010947 ,  50900100001298 ,
+						03910015181491,
+						29040015181478,
+						29040015181477,
+						03910200000508,
+						07250100008560,
+						50020100000763
+						)
+						Then Do DE 103 3rd Element -->
+						<groovy>
+							java.util.List<String> list = new java.util.ArrayList<String>();
+							list.add("98260100010947")
+							list.add("50900100001298")
+							list.add("03910015181491")
+							list.add("29040015181478")
+							list.add("29040015181477")
+							list.add("03910200000508")
+							list.add("07250100008560")
+							list.add("50020100000763")
+							
+							if(records['125'] == "FTOWN")
+								return value.split("\\s+")[2]
+							else if(value.split("\\s+")[2].equals("98260100010947"))
+								return records['125'].substring(30,39)
+							else if(value.split("\\s+")[2].equals("03910200000508") || value.split("\\s+")[2].equals("50020100000763"))
+								return records['126']
+							else if(records['125'].split("\\|")[0].equals("FTTPRTY") && !(list.contains(value.split("\\s+")[2])) )
+								return value.split("\\s+")[2]
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="tpp_curr_code">
+                    <srcField name="49"/>
+                </field>
+				
+				<field name="tpp_tran_amt">
+                    <srcField name="125">
+					<!-- If DE 125<1st Element Pipe Separated > = "FDR"
+						Then DE 125<7th Element>
+						Else If DE 125<1st Element Pipe Separated > = "ERD"
+						Then DE 125<6th Element>
+						Else If DE 125<1st Element Pipe Separated > = "TXNPPF"
+						Then DE 125<3rd Element>
+						Else DE 4 -->
+						<groovy>
+							if(value.split("\\|")[0].equals("FDR"))
+								return value.split("\\|")[6]
+							else if(value.split("\\|")[0].equals("ERD"))
+								return value.split("\\|")[5]
+							else if(value.split("\\|")[0].equals("TXNPPF"))
+								return value.split("\\|")[2]
+							else 
+								return records['4']
+						</groovy>
+					</srcField>
+                </field>
+				
+				<field name="tpp_description">
+                    <srcField name="102">
+					<!-- if DE 103( 3rd Element) = "98260100010947" 
+						OR 
+						if DE 125(1st Element<Pipe Separated>) ="TXNPPF" 
+						OR
+						if DE 125(1st Element<Pipe Separated>) ="FTOWN" 
+						OR
+						if DE 125(1st Element) = "FTTPRTY" AND DE 103(3rd Element) Not in ( 98260100010947 ,  50900100001298 ,
+						03910015181491,
+						29040015181478,
+						29040015181477,
+						03910200000508,
+						07250100008560,
+						50020100000763
+						)
+						Then Do DE 126
+						-->
+						<groovy>
+							java.util.List<String> list = new java.util.ArrayList<String>();
+							list.add("98260100010947")
+							list.add("50900100001298")
+							list.add("03910015181491")
+							list.add("29040015181478")
+							list.add("29040015181477")
+							list.add("03910200000508")
+							list.add("07250100008560")
+							list.add("50020100000763")
+							
+							if( (value.split("\\s+")[2].equals("98260100010947") || records['125'].split("\\|")[0].equals("TXNPPF") ||
+								records['125'].split("\\|")[0].equals("FTOWN") || (records['125'].split("\\|")[0].equals("FTTPRTY"))) &&
+								(!(list.contains(value.split("\\s+")[2])))
+								)
+							{
+								return records['126']
+							}
+						</groovy>
+					</srcField>
+                </field>
+			   
+			   <field name="xqo_cust_num">
+                    <srcField name=""/>
+                <!-- CLOC.CUST_ID -->
+				</field>
+				
+				<field name="xqo_language">
+                    <srcField name=""/>
+                <!-- CUSR.LANG_ID -->
+				</field>
+				
+				<field name="xqo_cust_post_code">
+                    <srcField name=""/>
+                <!-- CUSR.C_ZIP -->
+				</field>
+				
+				<field name="xqo_cust_cntry_code">
+                    <srcField name=""/>
+                <!-- CUSR.C_CNTRY -->
+				</field>
+				
+
+				<field name="smh_acct_type">
+                    <srcField name="102">
+					<!--  <groovy>
+					"If DE 102( 3rd Element Bits 5-6) in ( 01 , 02 ) 
+						Then Do
+						""CS""
+								Else = ""06""
+						Then Do 
+               ""SL""
+					Else = ""05""
+					Then Do
+					""CC""
+					Else Do 
+               ""NA"" 
+						Done"
+				</grovvy> -->
+					<groovy>
+						if(value.split("\\s+")[2].substring(4,6).equals("01") || value.split("\\s+")[2].substring(4,6).equals("02"))
+							return "CS"
+						else if(value.split("\\s+")[2].substring(4,6).equals("06"))
+							return "SL"
+						else if(value.split("\\s+")[2].substring(4,6).equals("05"))
+							return "CC"
+						else
+							"NA"
+					</groovy>
+				</srcField>
+                </field>
+				
+				<field name="smh_seg_id_version" default="00000004"/>
+				
+				<field name="smh_msg_version" default="04.04.03"/>
+				
+                <field name="smh_tran_type" default="TRX"/>
+
+                <field name="smh_cust_type" default="B"/>
+
+                <field name="smh_authenticate_mtd" default="NC"/>
+
+                <field name="smh_channel_type" default="W"/>
+
+				<field name="smh_priority" default="7"/>
+
+				<field name="smh_msg_type" default="1"/>
+
+				<field name="smh_resp_req" default="1"/>
+
+				<field name="smh_sdd_ind" default="1"/>
+
+				<field name="smh_source" default="BOB"/>
+
+				<field name="smh_dest" default="SFM"/>
+            
+                <field name="smh_multi_org_name" default="BOB"/>
+
+                <field name="smh_activity_detail1" default="NAP"/>
+
+                <field name="smh_activity_detail2" default="NAP"/>
+
+                <field name="smh_activity_detail3" default="NAP"/>
+				
+				<field name="smh_activity_type" default="BF"/>
+				
+				<field name="aqd_seg_id_version" default="01202002"/>
+				
+				<field name="aqd_acct_relationship" default="S"/>
+				
+				<field name="aqo_seg_id_version" default="01200003"/>
+				
+				<field name="aqo_billing_curr_code" default="356"/>
+				
+				<field name="aqo_bill_curr_conv_rate" default="1"/>
+												
+				<field name="hob_seg_id_version" default="01403003"/>
+				
+				<field name="hob_device" default="A"/>
+				
+				<field name="hqo_seg_id_version" default="01401002"/>
+				
+				<field name="hqo_entity_use_ob_userid" default="H"/>
+				
+				<field name="hqo_limit_type" default="TFR"/>
+				
+				<field name="hqo_limit_curr_code" default="356"/>
+				
+				<field name="hqo_limit_curr_conv_rate" default="1"/>
+				
+				<field name="rqo_seg_id_version" default="01001004"/>
+                
+				<field name="rqo_tran_utc_flag" default="Y"/>
+                
+                <field name="tbt_seg_id_version" default="01502102"/>
+				
+				<field name="tbt_revision_code" default="O"/>
+				
+				<field name="tpp_seg_id_version" default="01504003"/>
+				
+				<field name="tpp_payee_payer_ind" default="E"/>
+				
+				<field name="xqo_seg_id_version" default="01101003"/>
+                
+              </fields>
+        </message>
+    </messages>
+</application>
